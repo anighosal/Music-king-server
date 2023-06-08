@@ -8,7 +8,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.lhk2now.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -25,9 +25,16 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
+    const usersCollection = client.db("musicDb").collection("users");
     const musicDataCollection = client.db("musicDb").collection("musicData");
     const selectClassCollection = client.db("musicDb").collection("classes");
 
+    // user related api
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
     app.get("/musicData", async (req, res) => {
       const result = await musicDataCollection.find().toArray();
       res.send(result);
@@ -48,6 +55,13 @@ async function run() {
       const singleClass = req.body;
       console.log(singleClass);
       const result = await selectClassCollection.insertOne(singleClass);
+      res.send(result);
+    });
+
+    app.delete("/classes/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await selectClassCollection.deleteOne(query);
       res.send(result);
     });
     // Send a ping to confirm a successful connection
