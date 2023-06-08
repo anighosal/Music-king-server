@@ -29,9 +29,21 @@ async function run() {
     const musicDataCollection = client.db("musicDb").collection("musicData");
     const selectClassCollection = client.db("musicDb").collection("classes");
 
-    // user related api
+    // user related apis
+
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.findOne().toArray();
+      res.send(result);
+    });
     app.post("/users", async (req, res) => {
       const user = req.body;
+
+      const query = { email: user.email };
+      const existingUser = await usersCollection.findOne(query);
+      console.log("exixting user", existingUser);
+      if (existingUser) {
+        return res.send({ message: "user already exists" });
+      }
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
@@ -40,7 +52,7 @@ async function run() {
       res.send(result);
     });
 
-    // class collection
+    // class collection apis
     app.get("/classes", async (req, res) => {
       const email = req.query.email;
       console.log(email);
