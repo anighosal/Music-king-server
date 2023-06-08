@@ -23,12 +23,31 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const musicDataCollection = client.db("musicDb").collection("musicData");
+    const selectClassCollection = client.db("musicDb").collection("classes");
 
     app.get("/musicData", async (req, res) => {
       const result = await musicDataCollection.find().toArray();
+      res.send(result);
+    });
+
+    // class collection
+    app.get("/classes", async (req, res) => {
+      const email = req.query.email;
+      console.log(email);
+      if (!email) {
+        res.send([]);
+      }
+      const query = { email: email };
+      const result = await selectClassCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.post("/classes", async (req, res) => {
+      const singleClass = req.body;
+      console.log(singleClass);
+      const result = await selectClassCollection.insertOne(singleClass);
       res.send(result);
     });
     // Send a ping to confirm a successful connection
