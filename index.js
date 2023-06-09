@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -29,6 +30,14 @@ async function run() {
     const musicDataCollection = client.db("musicDb").collection("musicData");
     const selectClassCollection = client.db("musicDb").collection("classes");
 
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, env.process.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+
     // user related apis
 
     app.get("/users", async (req, res) => {
@@ -49,7 +58,7 @@ async function run() {
     });
 
     // admin role
-    app.patch("users/admin/:id", async (req, res) => {
+    app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -63,8 +72,9 @@ async function run() {
     });
 
     // instructor role
-    app.patch("users/instructor/:id", async (req, res) => {
+    app.patch("/users/instructor/:id", async (req, res) => {
       const id = req.params.id;
+      console.log(id);
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
@@ -75,6 +85,13 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+
+    app.get("/musicData", async (req, res) => {
+      const result = await musicDataCollection.find().toArray();
+      res.send(result);
+    });
+
+    // popular 6 class sort
     app.get("/musicData", async (req, res) => {
       const sort = req.query.sort;
 
