@@ -32,12 +32,12 @@ async function run() {
     // user related apis
 
     app.get("/users", async (req, res) => {
-      const result = await usersCollection.findOne().toArray();
+      const result = await usersCollection.find().toArray();
       res.send(result);
     });
     app.post("/users", async (req, res) => {
       const user = req.body;
-
+      console.log(user);
       const query = { email: user.email };
       const existingUser = await usersCollection.findOne(query);
       console.log("exixting user", existingUser);
@@ -48,7 +48,14 @@ async function run() {
       res.send(result);
     });
     app.get("/musicData", async (req, res) => {
-      const result = await musicDataCollection.find().toArray();
+      const sort = req.query.sort;
+
+      // const query = {};
+      const query = { numberOfStudents: { $gte: 11, $lte: 16 } };
+      const options = {
+        sort: { numberOfStudents: asc === "asc" ? 1 : -1 },
+      };
+      const result = await musicDataCollection.find(query, options).toArray();
       res.send(result);
     });
 
