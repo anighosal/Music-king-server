@@ -18,11 +18,14 @@ const verifyJWT = (req, res, next) => {
   }
   // bearer token
   const token = authorization.split(" ")[1];
+  console.log(token);
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    console.log(process.env.ACCESS_TOKEN_SECRET);
     if (err) {
-      return res.send
+      console.log(err);
+      return res
         .status(401)
-        .send({ error: true, message: "unauthorized access" });
+        .send({ error: true, message: "unauthorized access to" });
     }
     req.decoded = decoded;
     next();
@@ -58,9 +61,23 @@ async function run() {
       res.send({ token });
     });
 
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      console.log(68, user);
+      console.log(query);
+      if (user?.role !== "admin") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
+
     // user related apis
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -89,7 +106,7 @@ async function run() {
     // email
     // check
 
-    app.get("users/admin/:email", verifyJWT, async (req, res) => {
+    app.get("/users/admin/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
@@ -114,7 +131,7 @@ async function run() {
     });
 
     // instructor role
-    app.get("users/instructor/:email", verifyJWT, async (req, res) => {
+    app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
@@ -139,21 +156,41 @@ async function run() {
       res.send(result);
     });
 
-    // app.get("/musicData", async (req, res) => {
-    //   const result = await musicDataCollection.find().toArray();
-    //   res.send(result);
-    // });
+    app.get("/musicData", async (req, res) => {
+      const result = await musicDataCollection.find().toArray();
+      res.send(result);
+    });
+    // instructor verifyJWT
+    app.post("/musicData", verifyJWT, async (req, res) => {
+      const newClass = req.body;
+      console.log(newClass);
+
+      const result = await musicDataCollection.insertOne(newClass);
+      res.send(result);
+    });
+    app.delete("/musicData/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await musicDataCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // popular 6 class sort
-    app.get("/musicData", async (req, res) => {
+    app.get("/musicDataSort", async (req, res) => {
       const sort = req.query.sort;
 
       // const query = {};
       // const query = { numberOfStudents: { $gte: 11, $lte: 16 } };
       const options = {
-        sort: { numberOfStudents: asc === "asc" ? 1 : -1 },
+        sort: { numberOfStudents: sort === "asc" ? 1 : -1 },
       };
-      const result = await musicDataCollection.find({}).limit(6).toArray();
+      console.log(173, options);
+      const result = await musicDataCollection
+        .find()
+        .sort({ numberOfStudents: sort === "asc" ? 1 : -1 })
+        .limit(6)
+        .toArray();
+      console.log(173, result);
       res.send(result);
     });
 
