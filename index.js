@@ -3,6 +3,7 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 // middleware
@@ -74,6 +75,19 @@ async function run() {
       }
       next();
     };
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      console.log(68, user);
+      console.log(query);
+      if (user?.role !== "instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
 
     // user related apis
 
@@ -139,7 +153,7 @@ async function run() {
       }
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      const result = { admin: user?.role === "instructor" };
+      const result = { instructor: user?.role === "instructor" };
       res.send(result);
     });
     app.patch("/users/instructor/:id", async (req, res) => {
@@ -162,18 +176,23 @@ async function run() {
     });
     // instructor verifyJWT
     app.post("/musicData", verifyJWT, async (req, res) => {
-      const newClass = req.body;
-      console.log(newClass);
+      const formData = req.body;
+      console.log(formData);
 
-      const result = await musicDataCollection.insertOne(newClass);
+      const result = await musicDataCollection.insertOne(formData);
       res.send(result);
     });
-    app.delete("/musicData/:id", verifyJWT, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await musicDataCollection.deleteOne(query);
-      res.send(result);
-    });
+    app.delete(
+      "/musicData/:id",
+      verifyJWT,
+      verifyInstructor,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await musicDataCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
 
     // popular 6 class sort
     app.get("/musicDataSort", async (req, res) => {
