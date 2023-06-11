@@ -53,6 +53,7 @@ async function run() {
     const usersCollection = client.db("musicDb").collection("users");
     const musicDataCollection = client.db("musicDb").collection("musicData");
     const selectClassCollection = client.db("musicDb").collection("classes");
+    const paymentCollection = client.db("musicDb").collection("payments");
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -242,6 +243,47 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await selectClassCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // manage class
+    app.put("/classes/:id", (req, res) => {
+      const id = req.params.id;
+      const updatedClass = req.body;
+
+      // Update the class in the database
+      classes
+        .findByIdAndUpdate(id, updatedClass)
+        .then(() => {
+          res.status(200).json({ message: "Class updated successfully." });
+        })
+        .catch((error) => {
+          console.error("Failed to update class:", error);
+          res.status(500).json({ message: "Failed to update class." });
+        });
+    });
+
+    // payment post
+    app.post("/create-payment-intent/", async (req, res) => {
+      const { classPrice } = req.body;
+      const amount = parseInt(classPrice * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+      const query = {
+        _id: { $in: payment.subject.map((id) => new ObjectId(id)) },
+      };
+      const deleteResult = await selectClassCollection.deleteMany(query);
+      res.send(insertResult, deleteResult);
     });
 
     await client.db("admin").command({ ping: 1 });
